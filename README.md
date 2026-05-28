@@ -21,13 +21,15 @@
 
 - [Overview](#overview)
 - [Features](#features)
-- [Installation](#installation)
+- [Prerequisites](#prerequisites)
+- [Clone and Setup](#clone-and-setup)
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
 - [Testing](#testing)
 - [Project Structure](#project-structure)
 - [Extending the Server](#extending-the-server)
 - [Security Considerations](#security-considerations)
+- [Deployment](#deployment)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -85,52 +87,100 @@ The Model Context Protocol is a standardized specification that allows AI models
 
 ---
 
-## Installation
+## Prerequisites
 
-### Prerequisites
+Before you begin, ensure you have the following installed on your system:
 
-- Python 3.8 or higher
-- Git
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| Python3 | 3.8+ | Required for all modules |
+| pip | Latest | For installing dependencies (optional) |
+| Git | Any recent version | For cloning the repository |
 
-### Step-by-Step Installation
+### System-Specific Installation
 
-1. **Clone the Repository**
+**Ubuntu/Debian:**
+```bash
+sudo apt update
+sudo apt install python3 python3-pip python3-venv git
+```
+
+**macOS:**
+```bash
+brew install python3 git
+```
+
+**Windows:**
+1. Download Python from https://www.python.org/downloads/
+2. Download Git from https://git-scm.com/download/win
+
+### Verify Installation
+
+```bash
+# Verify Python
+python3 --version
+
+# Verify Git
+git --version
+```
+
+### Required API Keys
+
+This project does **not** require any API keys. All tools use simulated data and run locally without external dependencies.
+
+---
+
+## Optional Tools
+
+The following tools are optional but recommended:
+
+| Tool | Purpose | Installation |
+|------|---------|--------------|
+| pytest | For running unit tests | `pip install pytest` |
+| pytest-asyncio | For async test support | `pip install pytest-asyncio` |
+
+---
+
+## Clone and Setup
+
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/OumaCavin/mcp-weather-server.git
 cd mcp-weather-server
 ```
 
-2. **Verify Python Installation**
+### 2. Create Virtual Environment
 
 ```bash
-# Check Python version (should be 3.8+)
-python3 --version
+# Create virtual environment
+python3 -m venv .venv
 
-# If Python is not installed, install it:
-# Ubuntu/Debian:
-sudo apt update && sudo apt install python3 python3-pip
+# Activate virtual environment
+# On Linux/macOS:
+source .venv/bin/activate
 
-# macOS:
-brew install python3
-
-# Windows:
-# Download from https://www.python.org/downloads/
+# On Windows:
+.\.venv\Scripts\activate
 ```
 
-3. **Verify Project Files**
+### 3. Verify Setup
 
 ```bash
-# After cloning, verify these files exist:
+# Verify these files exist:
 ls -la
 
-# Expected output:
-# -rw-r--r--  mcp_server.py
-# -rw-r--r--  test_client.py
-# -rw-r--r--  requirements.txt
-# -rw-r--r--  README.md
-# -rw-r--r--  .gitignore
+# Expected output should include:
+# - mcp_server.py
+# - test_client.py
+# - requirements.txt
+# - README.md
+# - .gitignore
 ```
+
+### 4. Set Up Environment Variables (Optional)
+
+This project does not require environment variables. All configuration is handled internally.
 
 ---
 
@@ -138,21 +188,37 @@ ls -la
 
 ### Running the Server
 
-The server reads JSON requests from stdin and outputs JSON responses.
+**Important:** The server reads JSON requests from stdin and outputs JSON responses. It will appear to "hang" if run without input - this is expected behavior. The server is waiting for input.
 
-1. **Start the Server**
+**Option 1: Run with a test request (recommended for first-time users)**
 
 ```bash
-python3 mcp_server.py
+# Test tool discovery - this will exit immediately after showing results
+echo '{"action": "discover"}' | python3 mcp_server.py
+
+# Or test weather tool
+echo '{"action": "execute", "payload": {"tool": "get_weather", "arguments": {"location": "Tokyo"}}}' | python3 mcp_server.py
 ```
+
+**Option 2: Run the test suite (recommended)**
+
+```bash
+# Run all tests at once - the server will work automatically
+python3 test_client.py
+```
+
+**Option 3: Interactive mode (for advanced users)**
+
+1. **Start the server** - it will wait for input
+   ```bash
+   python3 mcp_server.py
+   ```
+2. **Type or paste** a JSON request
+3. **Press Enter** to send
+4. **View the response**
+5. **Press Ctrl+C** to exit
 
 2. **Test Tool Discovery**
-
-```bash
-echo '{"action": "discover"}' | python3 mcp_server.py
-```
-
-3. **Test Weather Tool**
 
 ```bash
 echo '{"action": "execute", "payload": {"tool": "get_weather", "arguments": {"location": "Tokyo", "units": "celsius"}}}' | python3 mcp_server.py
@@ -555,15 +621,19 @@ echo '{"action": "execute", "payload": {"tool": "process_text", "arguments": {"t
 ```
 mcp-weather-server/
 |
-+-- mcp_server.py        # Main MCP server implementation
++-- mcp_server.py        # Main MCP server (CLI interface)
+|
++-- web_server.py        # Flask web interface (HTTP API)
 |
 +-- test_client.py       # Comprehensive test suite
 |
-+-- requirements.txt     # Dependencies (minimal, standard library only)
++-- requirements.txt     # Python dependencies
 |
 +-- README.md           # This file
 |
 +-- .gitignore          # Git ignore patterns
+|
++-- dist/               # Deployment-ready files
 |
 +-- .git/               # Git repository
 ```
@@ -604,6 +674,306 @@ def _handle_my_new_tool(self, args: Dict[str, Any]) -> Dict[str, Any]:
 - **Input Validation**: The calculator tool only allows safe characters (+-*/.() 0-9)
 - **No External Network Calls**: All tools run locally by default
 - **Sandboxed Execution**: Tool handlers run in controlled environment
+
+---
+
+## Deployment
+
+### Live Demo
+
+Access the deployed MCP Weather Server demo: **https://0sfry4l9qbls.space.minimax.io**
+
+This is a static demo showing the MCP server capabilities. For full functionality, run locally or deploy to a cloud platform.
+
+### Local Deployment with Web Interface
+
+For the complete web interface with API endpoints:
+
+```bash
+# Clone and setup
+git clone https://github.com/OumaCavin/mcp-weather-server.git
+cd mcp-weather-server
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+
+# Install dependencies
+pip install flask
+
+# Run the web server
+python web_server.py
+
+# Access at http://localhost:5000
+```
+
+---
+
+### Platform-Specific Deployment Guides
+
+#### 1. Docker Deployment
+
+**Dockerfile:**
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY mcp_server.py web_server.py .
+
+EXPOSE 5000
+
+CMD ["python", "web_server.py"]
+```
+
+**Build and Run:**
+```bash
+# Build image
+docker build -t mcp-weather-server .
+
+# Run container
+docker run -d -p 5000:5000 --name mcp-server mcp-weather-server
+```
+
+**Docker Compose:**
+```yaml
+version: '3.8'
+services:
+  mcp-server:
+    build: .
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+```
+
+---
+
+#### 2. Heroku Deployment
+
+**Requirements:**
+- Heroku CLI installed
+- Git initialized
+
+**Steps:**
+```bash
+# Create Procfile
+echo "web: python web_server.py" > Procfile
+
+# Login to Heroku
+heroku login
+
+# Create Heroku app
+heroku create mcp-weather-server
+
+# Set buildpack for Python
+heroku buildpacks:set heroku/python
+
+# Deploy
+git push heroku main
+
+# Open app
+heroku open
+```
+
+**runtime.txt (specify Python version):**
+```
+python-3.11.0
+```
+
+---
+
+#### 3. Railway Deployment
+
+**Steps:**
+1. Go to [Railway.app](https://railway.app)
+2. Connect your GitHub repository
+3. Select the repository
+4. Railway will auto-detect Python and deploy
+5. Set start command: `python web_server.py`
+
+---
+
+#### 4. Render Deployment
+
+**Steps:**
+1. Go to [Render.com](https://render.com)
+2. Create a New Web Service
+3. Connect your GitHub repository
+4. Configure:
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `python web_server.py`
+5. Deploy
+
+---
+
+#### 5. Vercel Deployment
+
+Create `vercel.json`:
+```json
+{
+  "builds": [
+    {
+      "src": "web_server.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "web_server.py"
+    }
+  ]
+}
+```
+
+**Steps:**
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel
+```
+
+---
+
+#### 6. AWS Lambda Deployment
+
+**lambda_function.py:**
+```python
+import json
+from mcp_server import MCPServer, handle_request
+
+server = MCPServer()
+
+def lambda_handler(event, context):
+    body = json.loads(event.get('body', '{}'))
+    response = handle_request(body, server)
+    return {
+        'statusCode': 200,
+        'body': json.dumps(response)
+    }
+```
+
+**Requirements:**
+```bash
+pip install flask
+zip -r deployment.zip lambda_function.py mcp_server.py
+aws lambda create-function --function-name mcp-server ...
+```
+
+---
+
+#### 7. Google Cloud Run Deployment
+
+**Steps:**
+```bash
+# Build and push to Google Container Registry
+gcloud builds submit --tag gcr.io/PROJECT_ID/mcp-server
+
+# Deploy to Cloud Run
+gcloud run deploy mcp-server --image gcr.io/PROJECT_ID/mcp-server --platform managed
+```
+
+---
+
+#### 8. Azure App Service Deployment
+
+**Steps:**
+1. Create Web App in Azure Portal
+2. Configure deployment method (GitHub/Local Git/FTP)
+3. Set startup command: `python web_server.py`
+
+**Azure CLI:**
+```bash
+az webapp create --resource-group myGroup --plan myPlan --name mcp-server
+az webapp up --name mcp-server --location eastus
+```
+
+---
+
+### API Endpoints (Web Server)
+
+When deployed with `web_server.py`:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Web interface |
+| `/api/discover` | GET | List all available tools |
+| `/api/execute` | POST | Execute a tool |
+| `/api/health` | GET | Server health check |
+
+**Example API Usage:**
+```bash
+# Discover tools
+curl https://your-server.com/api/discover
+
+# Execute tool
+curl -X POST https://your-server.com/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"tool": "get_weather", "arguments": {"location": "Tokyo"}}'
+```
+
+---
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Server port | `5000` |
+| `DEBUG` | Enable debug mode | `False` |
+
+---
+
+### Health Monitoring
+
+The server provides a `/api/health` endpoint for monitoring:
+
+```json
+{
+  "status": "healthy",
+  "server": "MCP Weather Server",
+  "version": "1.0.0"
+}
+```
+
+---
+
+### Troubleshooting
+
+**Port Already in Use:**
+```bash
+# Find process using port 5000
+lsof -i :5000
+# Kill the process
+kill -9 PID
+```
+
+**Dependencies Not Installing:**
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+**Server Not Responding:**
+- Check firewall settings
+- Verify port is open
+- Check logs for errors
+
+---
+
+### Redeployment Checklist
+
+When redeploying to new platforms:
+
+- [ ] Update `requirements.txt` with all dependencies
+- [ ] Test locally with `python web_server.py`
+- [ ] Verify health endpoint responds
+- [ ] Check API endpoints work correctly
+- [ ] Update README if new deployment method added
 
 ---
 

@@ -1,15 +1,2 @@
-# MCP Weather Server Dependencies
-# Author: Cavin Otieno
-
-# No external dependencies required
-# Uses only Python standard library modules:
-# - json (built-in)
-# - sys (built-in)
-# - typing (built-in)
-# - dataclasses (built-in)
-# - enum (built-in)
-# - subprocess (built-in)
-
-# Optional dependencies for testing and development
-pytest>=7.0.0
-pytest-asyncio>=0.21.0
+Flask>=2.0.0
+Werkzeug>=2.0.0
