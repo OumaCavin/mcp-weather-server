@@ -2,6 +2,8 @@
 
 ![MCP Architecture Banner](https://cdn.dida.do/blog/mcp-architecture-(2).png)
 
+[![Vercel Production Deployment](https://github.com/OumaCavin/mcp-weather-server/actions/workflows/vercel.yml/badge.svg)](https://github.com/OumaCavin/mcp-weather-server/actions/workflows/vercel.yml)
+
 ---
 
 ## Technology Stack
@@ -10,10 +12,13 @@
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Protocol](https://img.shields.io/badge/Protocol-MCP%201.0-blue?style=for-the-badge)
 ![Standard](https://img.shields.io/badge/Standard-JSON%20RPC-orange?style=for-the-badge)
+![Vercel](https://img.shields.io/badge/Vercel-Ready-black?style=for-the-badge&logo=vercel&logoColor=white)
 
 ---
 
 **Author:** Cavin Otieno
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/OumaCavin/mcp-weather-server)
 
 ---
 
@@ -615,6 +620,10 @@ echo '{"action": "execute", "payload": {"tool": "process_text", "arguments": {"t
 ```
 mcp-weather-server/
 |
++-- .github/
+|   +-- workflows/
+|       +-- vercel.yml   # GitHub Actions deployment workflow
+|
 +-- mcp_server.py        # Main MCP server (CLI interface)
 |
 +-- web_server.py        # Flask web interface (HTTP API)
@@ -680,6 +689,21 @@ def _handle_my_new_tool(self, args: Dict[str, Any]) -> Dict[str, Any]:
 Access the deployed MCP Weather Server demo: **https://xv8o73fdxayy.space.minimax.io**
 
 This is a static demo showing the MCP server capabilities. For full functionality, run locally or deploy to a cloud platform.
+
+### GitHub Actions Setup
+
+To enable automated Vercel deployments:
+
+1. **Get Vercel Token**: Create a Vercel token at [vercel.com/account/tokens](https://vercel.com/account/tokens)
+
+2. **Add Secrets to GitHub**:
+   - Go to `Settings > Secrets and variables > Actions` in your repository
+   - Add these secrets:
+     - `VERCEL_TOKEN`: Your Vercel access token
+     - `VERCEL_ORG_ID`: Your Vercel organization ID (from `vercel.json` or project settings)
+     - `VERCEL_PROJECT_ID`: Your Vercel project ID (from `vercel.json` or project settings)
+
+3. **Link Vercel Project**: Run `vercel link` locally and copy the org and project IDs from `.vercel/project.json`
 
 ### Local Deployment with Web Interface
 
