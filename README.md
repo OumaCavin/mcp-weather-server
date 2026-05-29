@@ -218,12 +218,6 @@ python3 test_client.py
 4. **View the response**
 5. **Press Ctrl+C** to exit
 
-2. **Test Tool Discovery**
-
-```bash
-echo '{"action": "execute", "payload": {"tool": "get_weather", "arguments": {"location": "Tokyo", "units": "celsius"}}}' | python3 mcp_server.py
-```
-
 ### Available Tools
 
 | Tool Name | Description | Required Parameters |
@@ -629,6 +623,8 @@ mcp-weather-server/
 |
 +-- requirements.txt     # Python dependencies
 |
++-- vercel.json         # Vercel deployment configuration
+|
 +-- README.md           # This file
 |
 +-- .gitignore          # Git ignore patterns
@@ -681,7 +677,7 @@ def _handle_my_new_tool(self, args: Dict[str, Any]) -> Dict[str, Any]:
 
 ### Live Demo
 
-Access the deployed MCP Weather Server demo: **https://0sfry4l9qbls.space.minimax.io**
+Access the deployed MCP Weather Server demo: **https://xv8o73fdxayy.space.minimax.io**
 
 This is a static demo showing the MCP server capabilities. For full functionality, run locally or deploy to a cloud platform.
 
