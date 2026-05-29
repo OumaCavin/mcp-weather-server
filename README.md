@@ -18,7 +18,7 @@
 
 **Author:** Cavin Otieno
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/OumaCavin/mcp-weather-server)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/OumaCavin/mcp-weather-server&project-name=mcp-weather-server&repo-name=mcp-weather-server)
 
 ---
 
@@ -686,7 +686,7 @@ def _handle_my_new_tool(self, args: Dict[str, Any]) -> Dict[str, Any]:
 
 ### Live Demo
 
-Access the deployed MCP Weather Server demo: **https://xv8o73fdxayy.space.minimax.io**
+Access the deployed MCP Weather Server demo: **https://mcp-weather-server.vercel.app/**
 
 This is a static demo showing the MCP server capabilities. For full functionality, run locally or deploy to a cloud platform.
 
