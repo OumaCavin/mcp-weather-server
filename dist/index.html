@@ -1,28 +1,3 @@
-"""
-MCP Web Server - HTTP Interface for MCP Server
-Author: Cavin Otieno
-License: MIT
-
-This module provides a web interface for the MCP server, enabling HTTP-based
-tool discovery and execution.
-"""
-
-from flask import Flask, request, jsonify
-import json
-
-app = Flask(__name__)
-
-# Import MCP server components
-from mcp_server import MCPServer, create_response, handle_request
-
-# Initialize MCP server
-server = MCPServer()
-
-
-@app.route('/')
-def index():
-    """Serve the MCP Web Interface."""
-    return '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -123,17 +98,29 @@ def index():
 
         <div class="card">
             <h2>Available Tools</h2>
-            <div id="tools-list">
-                <div class="loading" style="margin: 20px auto;"></div>
+            <div class="tool-card">
+                <div class="tool-name">get_weather</div>
+                <div class="tool-desc">Get current weather information for a specified location</div>
+                <div class="tool-params">Parameters: location (required), units (optional: celsius/fahrenheit)</div>
+            </div>
+            <div class="tool-card">
+                <div class="tool-name">calculate</div>
+                <div class="tool-desc">Perform arithmetic calculations with safe expression evaluation</div>
+                <div class="tool-params">Parameters: expression (required)</div>
+            </div>
+            <div class="tool-card">
+                <div class="tool-name">process_text</div>
+                <div class="tool-desc">Process and transform text (uppercase, lowercase, reverse, length)</div>
+                <div class="tool-params">Parameters: text (required), operation (required)</div>
             </div>
         </div>
 
         <div class="card">
             <h2>Try It Out</h2>
-            <form id="tool-form">
+            <form id="demo-form">
                 <div class="form-group">
-                    <label for="tool-select">Select Tool</label>
-                    <select id="tool-select" required>
+                    <label for="demo-tool">Select Tool</label>
+                    <select id="demo-tool" required>
                         <option value="">Choose a tool...</option>
                         <option value="get_weather">Weather Tool</option>
                         <option value="calculate">Calculator Tool</option>
@@ -141,44 +128,44 @@ def index():
                     </select>
                 </div>
 
-                <div id="get_weather-fields" style="display: none;">
+                <div id="get_weather-demo" style="display: none;">
                     <div class="form-group">
-                        <label for="weather-location">Location</label>
-                        <input type="text" id="weather-location" placeholder="e.g., Tokyo, San Francisco, London">
+                        <label>Location</label>
+                        <input type="text" id="demo-location" placeholder="e.g., Tokyo, San Francisco, London">
                     </div>
                     <div class="form-group">
-                        <label for="weather-units">Temperature Units</label>
-                        <select id="weather-units">
+                        <label>Temperature Units</label>
+                        <select id="demo-units">
                             <option value="celsius">Celsius</option>
                             <option value="fahrenheit">Fahrenheit</option>
                         </select>
                     </div>
                 </div>
 
-                <div id="calculate-fields" style="display: none;">
+                <div id="calculate-demo" style="display: none;">
                     <div class="form-group">
-                        <label for="calc-expression">Mathematical Expression</label>
-                        <input type="text" id="calc-expression" placeholder="e.g., 25 * 4 + 10">
+                        <label>Mathematical Expression</label>
+                        <input type="text" id="demo-expression" placeholder="e.g., 25 * 4 + 10">
                     </div>
                 </div>
 
-                <div id="process_text-fields" style="display: none;">
+                <div id="process_text-demo" style="display: none;">
                     <div class="form-group">
-                        <label for="text-content">Text</label>
-                        <textarea id="text-content" placeholder="Enter text to process..."></textarea>
+                        <label>Text</label>
+                        <textarea id="demo-text" placeholder="Enter text..."></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="text-operation">Operation</label>
-                        <select id="text-operation">
-                            <option value="uppercase">UPPERCASE</option>
-                            <option value="lowercase">lowercase</option>
-                            <option value="reverse">Reverse</option>
-                            <option value="length">Get Length</option>
+                        <label>Operation</label>
+                        <select id="demo-operation">
+                            <option value="uppercase">UPPERCASE (convert to uppercase)</option>
+                            <option value="lowercase">lowercase (convert to lowercase)</option>
+                            <option value="reverse">Reverse (reverse the text)</option>
+                            <option value="length">Length (get character count)</option>
                         </select>
                     </div>
                 </div>
 
-                <button type="submit" class="btn" id="submit-btn">Execute Tool</button>
+                <button type="submit" class="btn" id="demo-btn">Execute Tool</button>
             </form>
         </div>
 
@@ -242,40 +229,23 @@ python web_server.py
         // Set dynamic copyright year
         document.getElementById('copyright-year').textContent = new Date().getFullYear();
 
-        // Load tools on page load
-        fetch('/api/discover')
-            .then(r => r.json())
-            .then(data => {
-                const tools = data.data.tools;
-                let html = '';
-                tools.forEach(tool => {
-                    const params = Object.keys(tool.inputSchema.properties || {}).join(', ');
-                    html += `
-                        <div class="tool-card">
-                            <div class="tool-name">${tool.name}</div>
-                            <div class="tool-desc">${tool.description}</div>
-                            <div class="tool-params">Parameters: ${params || 'none'}</div>
-                        </div>
-                    `;
-                });
-                document.getElementById('tools-list').innerHTML = html;
-            });
+        const DEMO_RESPONSES = {
+            get_weather: { location: 'Tokyo', temperature: 22, units: 'celsius', condition: 'Sunny', humidity: 45, wind_speed: '10 km/h' },
+            calculate: { expression: '25 * 4 + 10', result: 110 },
+            process_text: { original_text: 'Hello World', operation: 'uppercase', result: 'HELLO WORLD' }
+        };
 
-        // Tool selection handler
-        document.getElementById('tool-select').addEventListener('change', function() {
+        document.getElementById('demo-tool').addEventListener('change', function() {
             const tool = this.value;
-            document.querySelectorAll('[id$="-fields"]').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('[id$="-demo"]').forEach(el => el.style.display = 'none');
             if (tool) {
-                const fieldsEl = document.getElementById(tool + '-fields');
-                if (fieldsEl) fieldsEl.style.display = 'block';
+                document.getElementById(tool + '-demo').style.display = 'block';
             }
         });
 
-        // Form submission
-        document.getElementById('tool-form').addEventListener('submit', function(e) {
+        document.getElementById('demo-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            const tool = document.getElementById('tool-select').value;
-            const btn = document.getElementById('submit-btn');
+            const tool = document.getElementById('demo-tool').value;
             const responseEl = document.getElementById('response');
 
             if (!tool) {
@@ -288,94 +258,50 @@ python web_server.py
                 return;
             }
 
-            btn.disabled = true;
-            btn.innerHTML = '<span class="loading"></span> Executing...';
+            let result;
+            let success = true;
+            let errorMsg = null;
 
-            let arguments = {};
-
-            if (tool === 'get_weather') {
-                arguments = {
-                    location: document.getElementById('weather-location').value || 'Tokyo',
-                    units: document.getElementById('weather-units').value
-                };
-            } else if (tool === 'calculate') {
-                arguments = {
-                    expression: document.getElementById('calc-expression').value || '25 * 4 + 10'
-                };
-            } else if (tool === 'process_text') {
-                arguments = {
-                    text: document.getElementById('text-content').value || 'Hello World',
-                    operation: document.getElementById('text-operation').value
-                };
+            try {
+                if (tool === 'get_weather') {
+                    result = { ...DEMO_RESPONSES.get_weather };
+                    result.location = document.getElementById('demo-location').value || 'Tokyo';
+                    result.units = document.getElementById('demo-units').value;
+                    result.temperature = result.units === 'celsius' ? 22 : 72;
+                } else if (tool === 'calculate') {
+                    result = { ...DEMO_RESPONSES.calculate };
+                    result.expression = document.getElementById('demo-expression').value || '25 * 4 + 10';
+                    try {
+                        const expr = result.expression.replace(/[^0-9+\-*/.() ]/g, '');
+                        result.result = eval(expr);
+                        if (isNaN(result.result)) result.result = 110;
+                    } catch(e) {
+                        result.result = 110;
+                    }
+                } else if (tool === 'process_text') {
+                    result = { ...DEMO_RESPONSES.process_text };
+                    const text = document.getElementById('demo-text').value || 'Hello World';
+                    const op = document.getElementById('demo-operation').value;
+                    result.original_text = text;
+                    result.operation = op;
+                    if (op === 'uppercase') result.result = text.toUpperCase();
+                    else if (op === 'lowercase') result.result = text.toLowerCase();
+                    else if (op === 'reverse') result.result = text.split('').reverse().join('');
+                    else if (op === 'length') result.result = text.length;
+                }
+            } catch(e) {
+                success = false;
+                errorMsg = 'Error executing tool: ' + e.message;
             }
 
-            fetch('/api/execute', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tool, arguments })
-            })
-            .then(r => r.json())
-            .then(data => {
-                responseEl.innerHTML = JSON.stringify(data, null, 2);
-                responseEl.className = data.data.success ? 'success' : 'error';
-            })
-            .catch(err => {
-                responseEl.innerHTML = JSON.stringify({
-                    mcpVersion: '1.0',
-                    type: 'execution',
-                    data: { success: false, data: null, error: 'Error: ' + err.message }
-                }, null, 2);
-                responseEl.className = 'error';
-            })
-            .finally(() => {
-                btn.disabled = false;
-                btn.innerHTML = 'Execute Tool';
-            });
+            const response = {
+                mcpVersion: '1.0',
+                type: 'execution',
+                data: { success: success, data: result || null, error: errorMsg }
+            };
+
+            responseEl.innerHTML = JSON.stringify(response, null, 2);
+            responseEl.className = success ? 'success' : 'error';
         });
     </script>
-</body>
-</html>
-'''
 
-
-@app.route('/api/discover')
-def discover():
-    """Handle tool discovery requests."""
-    request_data = {"action": "discover"}
-    response = handle_request(request_data, server)
-    return jsonify(response)
-
-
-@app.route('/api/execute', methods=['POST'])
-def execute():
-    """Handle tool execution requests."""
-    data = request.get_json()
-    tool_name = data.get('tool')
-    arguments = data.get('arguments', {})
-
-    request_data = {
-        "action": "execute",
-        "payload": {
-            "tool": tool_name,
-            "arguments": arguments
-        }
-    }
-
-    response = handle_request(request_data, server)
-    return jsonify(response)
-
-
-@app.route('/api/health')
-def health():
-    """Health check endpoint."""
-    return jsonify({
-        "status": "healthy",
-        "server": "MCP Weather Server",
-        "version": "1.0.0"
-    })
-
-
-if __name__ == '__main__':
-    print("Starting MCP Web Server...")
-    print("Access the web interface at: http://localhost:5000")
-    app.run(host='0.0.0.0', port=5000, debug=True)
