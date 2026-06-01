@@ -131,7 +131,16 @@ git --version
 
 ### Required API Keys
 
-This project does **not** require any API keys. All tools use simulated data and run locally without external dependencies.
+For real weather data, you need an OpenWeatherMap API key:
+1. Get a free API key at https://openweathermap.org/api
+2. Set the environment variable:
+   ```bash
+   export WEATHER_API_KEY=your_api_key_here
+   ```
+
+**Without API Key:** The server works in demo mode with simulated weather data for any location.
+
+**With API Key:** Full access to real weather data for any city supported by OpenWeatherMap (200,000+ cities worldwide).
 
 ---
 
