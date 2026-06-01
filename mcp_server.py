@@ -9,9 +9,106 @@ This server implements the MCP specification for tool discovery and execution.
 
 import json
 import sys
+import os
+import urllib.request
+import urllib.error
+import urllib.parse
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, asdict
 from enum import Enum
+
+
+# OpenWeatherMap API Key - Get your free key at https://openweathermap.org/api
+# For demo purposes, you can use the placeholder below or set WEATHER_API_KEY environment variable
+OPENWEATHERMAP_API_KEY = os.environ.get('WEATHER_API_KEY', 'YOUR_API_KEY_HERE')
+
+# List of valid cities for validation (case-insensitive matching)
+VALID_CITIES = {
+    # Africa
+    "nairobi", "cairo", "lagos", "johannesburg", "cape town", "accra", "addis ababa", "dakar", "kinshasa", "dar es salaam",
+    # Asia
+    "tokyo", "beijing", "shanghai", "mumbai", "delhi", "bangalore", "hong kong", "singapore", "bangkok", "dubai", "riyadh", "istanbul",
+    # Europe
+    "london", "paris", "berlin", "madrid", "rome", "amsterdam", "vienna", "prague", "stockholm", "oslo", "copenhagen", "helsinki", "dublin", "lisbon", "athens", "moscow",
+    # North America
+    "new york", "los angeles", "chicago", "houston", "phoenix", "san francisco", "seattle", "miami", "boston", "denver", "toronto", "vancouver", "mexico city", "montreal",
+    # South America
+    "sao paulo", "rio de janeiro", "buenos aires", "lima", "bogota", "santiago",
+    # Oceania
+    "sydney", "melbourne", "brisbane", "auckland", "wellington",
+    # Caribbean
+    "kingston", "havana", "nassau", "san juan"
+}
+
+
+def get_weather_from_api(location: str, units: str = "metric") -> Dict[str, Any]:
+    """
+    Fetch real weather data from OpenWeatherMap API.
+
+    Args:
+        location: City name
+        units: 'metric' for Celsius, 'imperial' for Fahrenheit
+
+    Returns:
+        Weather data dictionary or error
+    """
+    api_key = OPENWEATHERMAP_API_KEY
+
+    # If no API key configured, return demo mode notice
+    if api_key == 'YOUR_API_KEY_HERE' or not api_key:
+        return {
+            "mode": "demo",
+            "message": "Configure WEATHER_API_KEY environment variable for real weather data",
+            "demo_available": True
+        }
+
+    # Determine API units
+    api_units = "metric" if units == "celsius" else "imperial"
+
+    # Build API URL
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={urllib.parse.quote(location)}&appid={api_key}&units={api_units}"
+
+    try:
+        with urllib.request.urlopen(url, timeout=10) as response:
+            data = json.loads(response.read().decode())
+
+            # Parse weather data
+            weather = data["weather"][0]
+            main = data["main"]
+            wind = data["wind"]
+
+            return {
+                "mode": "live",
+                "location": data["name"],
+                "country": data["sys"]["country"],
+                "temperature": round(main["temp"]),
+                "feels_like": round(main["feels_like"]),
+                "temp_min": round(main["temp_min"]),
+                "temp_max": round(main["temp_max"]),
+                "humidity": main["humidity"],
+                "pressure": main["pressure"],
+                "condition": weather["main"],
+                "description": weather["description"].capitalize(),
+                "icon": weather["icon"],
+                "wind_speed": wind.get("speed", 0),
+                "wind_direction": wind.get("deg", 0),
+                "visibility": data.get("visibility", "N/A"),
+                "sunrise": data["sys"]["sunrise"],
+                "sunset": data["sys"]["sunset"],
+                "timezone": data["timezone"],
+                "units": units
+            }
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            raise ValueError(f"City '{location}' not found. Please enter a valid city name.")
+        elif e.code == 401:
+            raise ValueError("Invalid API key. Please check your OpenWeatherMap API key.")
+        else:
+            raise ValueError(f"Weather API error: HTTP {e.code}")
+    except urllib.error.URLError:
+        raise ValueError("Unable to connect to weather service. Please check your internet connection.")
+    except Exception as e:
+        raise ValueError(f"Weather service error: {str(e)}")
 
 
 class ToolType(Enum):
@@ -205,20 +302,83 @@ class MCPServer:
             )
 
     def _handle_weather(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle weather tool execution."""
-        location = args.get("location", "Unknown")
+        """
+        Handle weather tool execution with location validation.
+
+        Validates the location against known cities and fetches real weather data
+        from OpenWeatherMap API if configured. Returns helpful error messages
+        for invalid locations.
+        """
+        location = args.get("location", "").strip()
         units = args.get("units", "celsius")
 
-        # Simulated weather data (in production, this would call a real weather API)
-        weather_data = {
-            "location": location,
-            "temperature": 22 if units == "celsius" else 72,
-            "units": units,
-            "condition": "Partly Cloudy",
-            "humidity": 65,
-            "wind_speed": "15 km/h"
-        }
-        return weather_data
+        # Validate location is provided
+        if not location:
+            raise ValueError("Location is required. Please provide a city name.")
+
+        # Check if location matches any known city (case-insensitive)
+        location_lower = location.lower()
+        is_valid_city = location_lower in VALID_CITIES
+
+        # Try to get real weather data
+        try:
+            weather_result = get_weather_from_api(location, units)
+
+            # If API returned demo mode or error, use validated demo
+            if weather_result.get("mode") == "demo":
+                # Use validated demo data - only for known cities
+                if is_valid_city:
+                    return {
+                        "mode": "demo",
+                        "location": location.title(),
+                        "temperature": 22 if units == "celsius" else 72,
+                        "units": units,
+                        "condition": "Sunny",
+                        "humidity": 65,
+                        "wind_speed": "15 km/h",
+                        "message": f"Demo mode: Real API key not configured. Validated city '{location}' accepted.",
+                        "api_key_required": True
+                    }
+                else:
+                    # Invalid city - provide helpful error with suggestions
+                    suggestions = self._get_city_suggestions(location_lower)
+                    raise ValueError(
+                        f"'{location}' is not a recognized city. "
+                        f"Please enter a valid city name such as: {suggestions}"
+                    )
+
+            return weather_result
+
+        except ValueError as e:
+            # Re-raise validation errors
+            raise
+        except Exception as e:
+            # For API errors in demo mode, fall back to validated demo
+            if is_valid_city:
+                return {
+                    "mode": "demo_fallback",
+                    "location": location.title(),
+                    "temperature": 22 if units == "celsius" else 72,
+                    "units": units,
+                    "condition": "Cloudy",
+                    "humidity": 70,
+                    "wind_speed": "12 km/h",
+                    "message": f"API temporarily unavailable. Using demo data for '{location}'.",
+                    "error": str(e)
+                }
+            else:
+                suggestions = self._get_city_suggestions(location_lower)
+                raise ValueError(
+                    f"'{location}' is not a recognized city. "
+                    f"Please enter a valid city name such as: {suggestions}"
+                )
+
+    def _get_city_suggestions(self, partial: str) -> str:
+        """Get city suggestions based on partial match."""
+        matches = [city for city in VALID_CITIES if partial in city]
+        if matches:
+            return ", ".join(matches[:5])
+        return "Nairobi, Tokyo, London, New York, Sydney"
 
     def _handle_calculate(self, args: Dict[str, Any]) -> Dict[str, Any]:
         """Handle calculator tool execution."""
