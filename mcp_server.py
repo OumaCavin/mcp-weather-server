@@ -22,22 +22,33 @@ from enum import Enum
 # For demo purposes, you can use the placeholder below or set WEATHER_API_KEY environment variable
 OPENWEATHERMAP_API_KEY = os.environ.get('WEATHER_API_KEY', 'YOUR_API_KEY_HERE')
 
-# List of valid cities for validation (case-insensitive matching)
+# Comprehensive list of valid cities for quick demo fallback
+# When API key is configured, any location supported by OpenWeatherMap works
 VALID_CITIES = {
-    # Africa
-    "nairobi", "cairo", "lagos", "johannesburg", "cape town", "accra", "addis ababa", "dakar", "kinshasa", "dar es salaam",
-    # Asia
-    "tokyo", "beijing", "shanghai", "mumbai", "delhi", "bangalore", "hong kong", "singapore", "bangkok", "dubai", "riyadh", "istanbul",
+    # Africa - Extended coverage
+    "nairobi", "cairo", "lagos", "johannesburg", "cape town", "accra", "addis ababa",
+    "dakar", "kinshasa", "dar es salaam", "abidjan", "yaounde", "douala", "algeria",
+    "tunis", "casablanca", "marrakech", "kigali", "kampala", "lusaka", "harare",
+    "maputo", "luanda", "harare", "abuja", "accra", "freetown", "monrovia", "bamako",
+    # Asia - Major cities
+    "tokyo", "beijing", "shanghai", "mumbai", "delhi", "bangalore", "hong kong",
+    "singapore", "bangkok", "dubai", "riyadh", "istanbul", "osaka", "seoul", "taipei",
+    "manila", "jakarta", "kuala lumpur", "hanoi", "ho chi minh city", "kolkata",
     # Europe
-    "london", "paris", "berlin", "madrid", "rome", "amsterdam", "vienna", "prague", "stockholm", "oslo", "copenhagen", "helsinki", "dublin", "lisbon", "athens", "moscow",
+    "london", "paris", "berlin", "madrid", "rome", "amsterdam", "vienna", "prague",
+    "stockholm", "oslo", "copenhagen", "helsinki", "dublin", "lisbon", "athens", "moscow",
+    "zurich", "warsaw", "brussels", "budapest", "bucharest", "kyiv", "minsk",
     # North America
-    "new york", "los angeles", "chicago", "houston", "phoenix", "san francisco", "seattle", "miami", "boston", "denver", "toronto", "vancouver", "mexico city", "montreal",
+    "new york", "los angeles", "chicago", "houston", "phoenix", "san francisco",
+    "seattle", "miami", "boston", "denver", "toronto", "vancouver", "mexico city",
+    "montreal", "atlanta", "dallas", "san diego", "las vegas", "austin", "portland",
     # South America
     "sao paulo", "rio de janeiro", "buenos aires", "lima", "bogota", "santiago",
+    "caracas", "medellin", "quito", "montevideo", "asuncion",
     # Oceania
-    "sydney", "melbourne", "brisbane", "auckland", "wellington",
+    "sydney", "melbourne", "brisbane", "auckland", "wellington", "perth", "adelaide",
     # Caribbean
-    "kingston", "havana", "nassau", "san juan"
+    "kingston", "havana", "nassau", "san juan", "santo domingo", "port au prince"
 }
 
 
@@ -326,26 +337,20 @@ class MCPServer:
 
             # If API returned demo mode or error, use validated demo
             if weather_result.get("mode") == "demo":
-                # Use validated demo data - only for known cities
-                if is_valid_city:
-                    return {
-                        "mode": "demo",
-                        "location": location.title(),
-                        "temperature": 22 if units == "celsius" else 72,
-                        "units": units,
-                        "condition": "Sunny",
-                        "humidity": 65,
-                        "wind_speed": "15 km/h",
-                        "message": f"Demo mode: Real API key not configured. Validated city '{location}' accepted.",
-                        "api_key_required": True
-                    }
-                else:
-                    # Invalid city - provide helpful error with suggestions
-                    suggestions = self._get_city_suggestions(location_lower)
-                    raise ValueError(
-                        f"'{location}' is not a recognized city. "
-                        f"Please enter a valid city name such as: {suggestions}"
-                    )
+                # Demo mode: allow any city with placeholder data
+                return {
+                    "mode": "demo",
+                    "location": location.title(),
+                    "temperature": 22 if units == "celsius" else 72,
+                    "units": units,
+                    "condition": "Sunny" if is_valid_city else "Unknown",
+                    "humidity": 65,
+                    "wind_speed": "15 km/h",
+                    "message": f"Demo mode: Real API key not configured. Data for '{location}' is simulated.",
+                    "api_key_required": True,
+                    "validated": is_valid_city,
+                    "suggestion": "Set WEATHER_API_KEY environment variable for real weather data from OpenWeatherMap"
+                }
 
             return weather_result
 
@@ -353,25 +358,19 @@ class MCPServer:
             # Re-raise validation errors
             raise
         except Exception as e:
-            # For API errors in demo mode, fall back to validated demo
-            if is_valid_city:
-                return {
-                    "mode": "demo_fallback",
-                    "location": location.title(),
-                    "temperature": 22 if units == "celsius" else 72,
-                    "units": units,
-                    "condition": "Cloudy",
-                    "humidity": 70,
-                    "wind_speed": "12 km/h",
-                    "message": f"API temporarily unavailable. Using demo data for '{location}'.",
-                    "error": str(e)
-                }
-            else:
-                suggestions = self._get_city_suggestions(location_lower)
-                raise ValueError(
-                    f"'{location}' is not a recognized city. "
-                    f"Please enter a valid city name such as: {suggestions}"
-                )
+            # For API errors, fall back to demo data for any city
+            return {
+                "mode": "demo_fallback",
+                "location": location.title(),
+                "temperature": 22 if units == "celsius" else 72,
+                "units": units,
+                "condition": "Cloudy",
+                "humidity": 70,
+                "wind_speed": "12 km/h",
+                "message": f"API temporarily unavailable. Using demo data for '{location}'.",
+                "validated": is_valid_city,
+                "error": str(e)
+            }
 
     def _get_city_suggestions(self, partial: str) -> str:
         """Get city suggestions based on partial match."""
