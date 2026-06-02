@@ -4,19 +4,76 @@ Author: Cavin Otieno
 License: MIT
 
 This module provides a web interface for the MCP server, enabling HTTP-based
-tool discovery and execution.
+tool discovery and execution with comprehensive error handling.
 """
 
 from flask import Flask, request, jsonify
 import json
+import logging
+from functools import wraps
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('MCPWebServer')
 
 app = Flask(__name__)
 
 # Import MCP server components
-from mcp_server import MCPServer, create_response, handle_request
+try:
+    from mcp_server import MCPServer, create_response, handle_request
+    server = MCPServer()
+    logger.info("MCP Server initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize MCP Server: {str(e)}")
+    server = None
 
-# Initialize MCP server
-server = MCPServer()
+
+def require_server(f):
+    """Decorator to ensure MCP server is initialized."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if server is None:
+            logger.error("Request received but MCP server not initialized")
+            return jsonify({
+                "error": "Server initialization failed",
+                "message": "MCP server is not available. Please check server logs."
+            }), 503
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors."""
+    logger.warning(f"404 error: {request.path}")
+    return jsonify({
+        "error": "Endpoint not found",
+        "message": f"The requested endpoint {request.path} does not exist",
+        "available_endpoints": ["/", "/api/discover", "/api/execute", "/api/health"]
+    }), 404
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors."""
+    logger.error(f"Internal server error: {str(error)}")
+    return jsonify({
+        "error": "Internal server error",
+        "message": "An unexpected error occurred. Please try again later."
+    }), 500
+
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    """Handle all unhandled exceptions."""
+    logger.error(f"Unhandled exception: {str(error)}")
+    return jsonify({
+        "error": "Unhandled exception",
+        "message": str(error)
+    }), 500
 
 
 @app.route('/')
@@ -339,43 +396,121 @@ python web_server.py
 
 
 @app.route('/api/discover')
+@require_server
 def discover():
-    """Handle tool discovery requests."""
-    request_data = {"action": "discover"}
-    response = handle_request(request_data, server)
-    return jsonify(response)
+    """Handle tool discovery requests with error handling."""
+    logger.info("Processing tool discovery request")
+    try:
+        request_data = {"action": "discover"}
+        response = handle_request(request_data, server)
+        logger.info("Tool discovery completed successfully")
+        return jsonify(response)
+    except Exception as e:
+        logger.error(f"Tool discovery failed: {str(e)}")
+        return jsonify({
+            "error": "Discovery failed",
+            "message": str(e)
+        }), 500
 
 
 @app.route('/api/execute', methods=['POST'])
+@require_server
 def execute():
-    """Handle tool execution requests."""
-    data = request.get_json()
-    tool_name = data.get('tool')
-    arguments = data.get('arguments', {})
+    """Handle tool execution requests with comprehensive error handling."""
+    logger.info("Processing tool execution request")
+    try:
+        # Validate request content type
+        if not request.is_json:
+            logger.error("Invalid content type: expected JSON")
+            return jsonify({
+                "error": "Invalid request",
+                "message": "Content-Type must be application/json"
+            }), 400
 
-    request_data = {
-        "action": "execute",
-        "payload": {
-            "tool": tool_name,
-            "arguments": arguments
+        data = request.get_json()
+
+        # Validate required fields
+        if not data:
+            logger.error("Empty request body")
+            return jsonify({
+                "error": "Invalid request",
+                "message": "Request body is required"
+            }), 400
+
+        tool_name = data.get('tool')
+        if not tool_name:
+            logger.error("Missing 'tool' field in request")
+            return jsonify({
+                "error": "Invalid request",
+                "message": "The 'tool' field is required"
+            }), 400
+
+        arguments = data.get('arguments', {})
+
+        # Validate arguments type
+        if not isinstance(arguments, dict):
+            logger.error(f"Invalid arguments type: {type(arguments)}")
+            return jsonify({
+                "error": "Invalid request",
+                "message": "Arguments must be an object/dictionary"
+            }), 400
+
+        request_data = {
+            "action": "execute",
+            "payload": {
+                "tool": tool_name,
+                "arguments": arguments
+            }
         }
-    }
 
-    response = handle_request(request_data, server)
-    return jsonify(response)
+        response = handle_request(request_data, server)
+        logger.info(f"Tool execution completed for: {tool_name}")
+        return jsonify(response)
+
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {str(e)}")
+        return jsonify({
+            "error": "Invalid JSON",
+            "message": f"Failed to parse JSON: {str(e)}"
+        }), 400
+
+    except Exception as e:
+        logger.error(f"Tool execution failed: {str(e)}")
+        return jsonify({
+            "error": "Execution failed",
+            "message": str(e)
+        }), 500
 
 
 @app.route('/api/health')
+@require_server
 def health():
-    """Health check endpoint."""
-    return jsonify({
-        "status": "healthy",
-        "server": "MCP Weather Server",
-        "version": "1.0.0"
-    })
+    """Health check endpoint with detailed status."""
+    logger.info("Health check requested")
+    try:
+        # Check if server is functional
+        tools = server.discover_tools()
+        return jsonify({
+            "status": "healthy",
+            "server": "MCP Weather Server",
+            "version": "1.0.0",
+            "tools_available": len(tools),
+            "uptime": "operational"
+        })
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return jsonify({
+            "status": "unhealthy",
+            "server": "MCP Weather Server",
+            "error": str(e)
+        }), 503
 
 
 if __name__ == '__main__':
     print("Starting MCP Web Server...")
     print("Access the web interface at: http://localhost:5000")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    try:
+        app.run(host='0.0.0.0', port=5000, debug=True)
+    except Exception as e:
+        print(f"Failed to start server: {str(e)}")
+        logger.error(f"Server startup failed: {str(e)}")
