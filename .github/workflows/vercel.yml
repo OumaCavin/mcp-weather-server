@@ -8,6 +8,21 @@ on:
     branches:
       - main
 
+# Auto-deploy configuration:
+# This workflow automatically deploys to Vercel when:
+# 1. Changes are pushed to main branch -> Production deployment
+# 2. Pull requests are created -> Preview deployment
+#
+# Required GitHub Secrets to enable auto-deploy:
+# - VERCEL_TOKEN: Your Vercel access token
+# - VERCEL_ORG_ID: Your Vercel organization ID
+# - VERCEL_PROJECT_ID: Your Vercel project ID
+#
+# To set these secrets:
+# 1. Go to https://github.com/OumaCavin/mcp-weather-server/settings/secrets/actions
+# 2. Click "New repository secret"
+# 3. Add each secret with its value
+
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
