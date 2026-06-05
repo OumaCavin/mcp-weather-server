@@ -579,7 +579,7 @@ def handle_request(request: Dict[str, Any], server: MCPServer) -> Dict[str, Any]
 
     except Exception as e:
         logger.error(f"Request handling error: {str(e)}")
-        return create_response("error", {"message": f"Request handling failed: {str(e)}")
+        return create_response("error", {"message": f"Request handling failed: {str(e)}"})
 
 
 def main():
